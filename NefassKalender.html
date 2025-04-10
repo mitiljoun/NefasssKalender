@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NefasssKalender</title>
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment-jalaali@0.9.1/moment-jalaali.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      margin: 0;
+    }
+    #calendar {
+      max-width: 100%;
+      width: 100%;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.5em;
+    }
+    .fc-event-title {
+      font-weight: bold;
+      color: white;
+    }
+
+    .fc-event {
+      background-color: #22639c !important; 
+      border-color: #22639c !important; 
+    }
+
+    .fc-button-primary {
+      background-color: #22639c !important;
+      border-color: #22639c !important;
+      color: white !important;
+    }
+
+    .fc-button-primary:hover {
+      background-color: #1d5586 !important;
+      border-color: #1d5586 !important;
+    }
+
+    .fc-button-prev, .fc-button-next, .fc-button-today, .fc-button-refresh {
+      background-color: #22639c !important;
+      border-color: #22639c !important;
+      color: white !important;
+    }
+
+    .fc-button-prev:hover, .fc-button-next:hover, .fc-button-today:hover, .fc-button-refresh:hover {
+      background-color: #1d5586 !important;
+      border-color: #1d5586 !important;
+    }
+
+    .fc-event span {
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mein Kalender</h1>
+  <button id="switch-calendar" style="margin: 20px; display: block; margin-left: auto; margin-right: auto;">تقویم فارسی </button>
+  <div id="calendar"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+  <script>
+    let isPersianCalendar = false;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      let calendarEl = document.getElementById('calendar');
+
+      let calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        headerToolbar: {
+          left: 'prev,next today,refresh',
+          center: 'title',
+          right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        editable: true,
+        selectable: true,
+        locale: 'de',
+        events: loadEvents(),
+        customButtons: {
+          refresh: {
+            text: 'Refresh',
+            click: function () {
+              location.reload();
+            }
+          }
+        },
+        eventContent: function (arg) {
+          const event = arg.event;
+          const title = document.createElement('div');
+          const startTime = formatTime(event.start);
+          const endTime = event.end ? formatTime(event.end) : '';
+          title.innerText = startTime + (endTime ? ' - ' + endTime : '') + ' ' + event.title;
+          title.style.color = 'white';
+
+          if (calendar.view.type === 'timeGridDay' && event.extendedProps.note) {
+            const noteDiv = document.createElement('div');
+            noteDiv.innerText = 'Anmerkung: ' + event.extendedProps.note;
+            noteDiv.style.fontStyle = 'italic';
+            noteDiv.style.marginTop = '5px';
+            title.appendChild(noteDiv);
+          }
+
+          const editBtn = document.createElement('span');
+          editBtn.innerHTML = '✏️';
+          editBtn.style.cursor = 'pointer';
+          editBtn.style.marginLeft = '10px';
+          editBtn.title = 'Bearbeiten';
+          editBtn.onclick = function () {
+            const newTitle = prompt('Neuer Kursteilnehmer:', event.title);
+            if (!newTitle) return;
+
+            const startTimeStr = prompt('Startzeit (z. B. 14:00):', startTime);
+            const endTimeStr = prompt('Endzeit (z. B. 15:30):', endTime);
+
+            const formattedStartTime = formatTimeInput(startTimeStr);
+            const formattedEndTime = formatTimeInput(endTimeStr);
+
+            if (!isValidTime(formattedStartTime) || !isValidTime(formattedEndTime)) {
+              alert("Ungültiges Zeitformat. Bitte im Format HH:mm angeben.");
+              return;
+            }
+
+            const newStartDateTime = event.start.toISOString().split('T')[0] + 'T' + formattedStartTime;
+            const newEndDateTime = event.start.toISOString().split('T')[0] + 'T' + formattedEndTime;
+
+            event.setProp('title', newTitle);
+            event.setStart(newStartDateTime);
+            event.setEnd(newEndDateTime);
+
+            saveEvents(calendar.getEvents());
+          };
+
+          const deleteBtn = document.createElement('span');
+          deleteBtn.innerHTML = '🗑️';
+          deleteBtn.style.cursor = 'pointer';
+          deleteBtn.style.marginLeft = '5px';
+          deleteBtn.title = 'Löschen';
+          deleteBtn.onclick = function () {
+            if (confirm('Möchtest du diesen Termin löschen?')) {
+              event.remove();
+              saveEvents(calendar.getEvents());
+            }
+          };
+
+          const noteBtn = document.createElement('span');
+          noteBtn.innerHTML = '📝';
+          noteBtn.style.cursor = 'pointer';
+          noteBtn.style.marginLeft = '5px';
+          noteBtn.title = 'Anmerkung hinzufügen';
+          noteBtn.onclick = function () {
+            const note = prompt('Füge eine Anmerkung hinzu:');
+            if (note !== null) {
+              event.setExtendedProp('note', note);
+              saveEvents(calendar.getEvents());
+            }
+          };
+
+          const container = document.createElement('div');
+          container.appendChild(title);
+          container.appendChild(editBtn);
+          container.appendChild(deleteBtn);
+          container.appendChild(noteBtn);
+
+          return { domNodes: [container] };
+        },
+        dateClick: function (info) {
+          const title = prompt('Kursteilnehmer:');
+          if (!title) return;
+
+          let startTimeStr = prompt('Startzeit (z. B. 14:00):');
+          let endTimeStr = prompt('Endzeit (z. B. 15:30):');
+
+          startTimeStr = formatTimeInput(startTimeStr);
+          endTimeStr = formatTimeInput(endTimeStr);
+
+          if (!isValidTime(startTimeStr) || !isValidTime(endTimeStr)) {
+            alert("Ungültiges Zeitformat. Bitte im Format HH:mm angeben.");
+            return;
+          }
+
+          const startDateTime = info.dateStr + 'T' + startTimeStr;
+          const endDateTime = info.dateStr + 'T' + endTimeStr;
+
+          const newEvent = {
+            title: title,
+            start: startDateTime,
+            end: endDateTime,
+            extendedProps: {
+              repeat: true
+            }
+          };
+
+          calendar.addEvent(newEvent);
+          saveEvents(calendar.getEvents());
+          copyEventsToOtherWeeks(newEvent);  // Wiederhole den Termin für die nächsten 4 Wochen
+        }
+      });
+
+      calendar.render();
+
+      document.getElementById("switch-calendar").addEventListener("click", function() {
+        isPersianCalendar = !isPersianCalendar;
+        switchCalendar(isPersianCalendar, calendar);
+      });
+
+      function formatTime(date) {
+        const hours = date.getHours().toString().padStart(2, "0");
+        const mins = date.getMinutes().toString().padStart(2, "0");
+        return `${hours}:${mins}`;
+      }
+
+      function formatTimeInput(timeStr) {
+        if (!timeStr.includes(":")) {
+          return timeStr + ":00";
+        }
+        return timeStr;
+      }
+
+      function isValidTime(timeStr) {
+        return /^\d{2}:\d{2}$/.test(timeStr);
+      }
+
+      function saveEvents(events) {
+        const data = events.map(event => ({
+          title: event.title,
+          start: event.start.toISOString(),
+          end: event.end ? event.end.toISOString() : null,
+          note: event.extendedProps.note || null,
+          repeat: event.extendedProps.repeat || false
+        }));
+        localStorage.setItem("myCalendarEvents", JSON.stringify(data));
+      }
+
+      function loadEvents() {
+        const data = localStorage.getItem("myCalendarEvents");
+        return data ? JSON.parse(data) : [];
+      }
+
+      function switchCalendar(isPersian, calendar) {
+        if (isPersian) {
+          calendar.setOption('locale', 'fa');  // Persischer Kalender
+          document.getElementById("switch-calendar").innerText = "Gregorianischen Kalender";
+        } else {
+          calendar.setOption('locale', 'de');  // Gregorianischer Kalender
+          document.getElementById("switch-calendar").innerText = "تقویم فارسی ";
+        }
+      }
+
+      function copyEventsToOtherWeeks(newEvent) {
+        const weeksToRepeat = 4;
+        const newEvents = [];
+
+        for (let i = 1; i <= weeksToRepeat; i++) {
+          const newStart = new Date(newEvent.start);
+          const newEnd = new Date(newEvent.end);
+          
+          newStart.setDate(newStart.getDate() + (7 * i)); // Nächste Woche hinzufügen
+          newEnd.setDate(newEnd.getDate() + (7 * i)); // Endzeit anpassen
+
+          const repeatedEvent = {
+            title: newEvent.title,
+            start: newStart.toISOString(),
+            end: newEnd.toISOString(),
+            extendedProps: {
+              repeat: true
+            }
+          };
+
+          newEvents.push(repeatedEvent);
+        }
+
+        newEvents.forEach(event => {
+          calendar.addEvent(event);  // Füge das wiederholte Event dem Kalender hinzu
+        });
+        
+        saveEvents(calendar.getEvents());  // Speichere die aktualisierte Liste der Events
+      }
+    });
+  </script>
+</body>
+</html>
