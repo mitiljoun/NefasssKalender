@@ -4,10 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NefasssKalender</title>
-
-  <!-- Manifest -->
-  <link rel="manifest" href="manifest.json" />
-
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/moment-jalaali@0.9.1/moment-jalaali.min.js"></script>
@@ -286,19 +282,6 @@
         saveEvents(calendar.getEvents());  // Speichere die aktualisierte Liste der Events
       }
     });
-
-    // Registriere den Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js')
-        .then((registration) => {
-          console.log('Service Worker registriert mit dem Scope: ', registration.scope);
-        })
-        .catch((error) => {
-          console.log('Service Worker Registrierung fehlgeschlagen: ', error);
-        });
-    } else {
-      console.log('Service Worker wird von diesem Browser nicht unterstützt.');
-    }
   </script>
 </body>
 </html>
